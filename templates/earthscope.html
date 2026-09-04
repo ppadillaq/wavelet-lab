@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>EarthScope Seismic Data</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .controls label {
+            margin-right: 5px;
+        }
+
+        .controls select {
+            max-width: 250px;
+        }
+        .controls input {
+            margin-right: 15px;
+            padding: 6px;
+        }
+
+        button {
+            padding: 7px 15px;
+            cursor: pointer;
+        }
+
+        .plot {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 400px;
+        }
+
+        .earthquake-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-bottom: 30px;
+        }
+
+        .earthquake-table th,
+        .earthquake-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .mag-low {
+            background-color: #fff3cd;
+        }
+
+        .mag-medium {
+            background-color: #f8a65b;
+        }
+
+        .mag-high {
+            background-color: #e76b6b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>EarthScope Seismic Data Explorer</h1>
+
+    <h2>Latest earthquakes</h2>
+
+    <p>
+        Source: USGS Earthquake Hazards Program (ComCat).
+        The table shows the 10 most recent earthquakes worldwide with a magnitude
+        of 6.0 or greater, ordered from newest to oldest.
+    </p>
+
+    <table class="earthquake-table">
+
+        <tr>
+            <th>Magnitude</th>
+            <th>Date & Time</th>
+            <th>Location</th>
+            <th>Depth (km)</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+        </tr>
+
+        {% for event in events %}
+        <tr>
+            <td class="
+                {% if event.magnitude >= 7 %}
+                    mag-high
+                {% elif event.magnitude >= 6 %}
+                    mag-medium
+                {% else %}
+                    mag-low
+                {% endif %}
+            ">
+                {{ event.magnitude }}
+            </td>
+
+            <td>{{ event.time }}</td>
+            <td>{{ event.place }}</td>
+            <td>{{ event.depth }}</td>
+            <td>{{ event.latitude }}</td>
+            <td>{{ event.longitude }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    <div class="controls">
+        <form method="POST">
+
+            <label for="network">Network:</label>
+            <select name="network" id="network">
+                {% for network in networks %}
+                    <option value="{{ network.code }}"
+                        {% if network.code == (selected_network or 'II') %}selected{% endif %}>
+                        {{ network.code }} - {{ network.description }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label for="station">Station:</label>
+            <select name="station" id="station"
+                    data-selected="{{ selected_station or '' }}">
+                <option value="">Select station</option>
+            </select>
+
+            <label for="channel">Channel:</label>
+            <select name="channel" id="channel"
+                    data-selected="{{ selected_channel or '' }}">
+                <option value="">Select channel</option>
+            </select>
+
+            <br><br>
+
+            <label for="start">Start:</label>
+            <input type="datetime-local" name="start" id="start"
+                value="{{ selected_start or '' }}">
+
+            <label for="end">End:</label>
+            <input type="datetime-local" name="end" id="end"
+                value="{{ selected_end or '' }}">
+
+            <button type="submit">Load data</button>
+
+        </form>
+  
+    </div>
+
+    <div class="plot">
+        <h2>Seismic waveform</h2>
+
+        {% if error %}
+            <p>{{ error }}</p>
+
+        {% elif times and values %}
+            <div id="waveformPlot"></div>
+
+            <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+            <script>
+                const times = {{ times | tojson }};
+                const values = {{ values | tojson }};
+
+                const trace = {
+                    x: times,
+                    y: values,
+                    type: 'scatter',
+                    mode: 'lines'
+                };
+
+                const layout = {
+                    xaxis: {
+                        title: 'Time'
+                    },
+                    yaxis: {
+                        title: 'Amplitude'
+                    }
+                };
+
+                Plotly.newPlot('waveformPlot', [trace], layout);
+
+            </script>
+
+        {% else %}
+            <p>Select a station and time interval to display data.</p>
+        {% endif %}
+    </div>
+
+    <label for="wavelet">Wavelet</label>
+
+    <div class="wavelet-tabs">
+
+        <button type="button" class="wavelet-tab active" data-wavelet="cmor">
+            Morlet
+        </button>
+
+        <button type="button" class="wavelet-tab" data-wavelet="mexh">
+            Mexican Hat
+        </button>
+
+        <button type="button" class="wavelet-tab" data-wavelet="gaus">
+            Gaussian
+        </button>
+
+    </div>
+
+    <input type="hidden" id="wavelet" value="cmor">
+
+    <div id="morlet-controls" class="wavelet-controls">
+
+        <label for="bandwidth">Bandwidth B</label>
+        <input type="number" id="bandwidth"
+            value="1.5" step="0.1" min="0.1">
+
+        <label for="center-frequency">Center frequency C</label>
+        <input type="number" id="center-frequency"
+            value="1.0" step="0.1" min="0.1">
+
+    </div>
+
+    <div id="cwtPlot"
+        data-values='{{ raw_values | tojson }}'
+        data-times='{{ times | tojson }}'>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/earthscope.js') }}"></script>
+
+</body>
+</html>
