@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Data Explorer</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .selected-station {
+            display: none;
+            background: #f0f7ff;
+            border: 1px solid #cfe3f8;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .selected-station h3 {
+            margin-top: 0;
+        }
+
+        .selected-station p {
+            margin: 8px 0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f7f7f7;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .select-station {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .select-station:hover {
+            background: #1d4ed8;
+        }
+
+        .latest-value {
+            font-weight: bold;
+        }
+
+        .measurement-time {
+            color: #666;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .empty-message {
+            color: #666;
+            padding: 20px 0;
+        }
+
+        .date-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: end;
+            margin-top: 20px;
+        }
+
+        .date-controls div {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .date-controls label {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .date-controls input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        #loadData {
+            background: #0f766e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 9px 16px;
+            cursor: pointer;
+        }
+
+        #loadData:hover {
+            background: #115e59;
+        }
+
+        #dataStatus {
+            color: #666;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <a href="{{ url_for('home') }}" class="back-link">
+        ← Back to Wavelet Lab
+    </a>
+
+    <h1>Water Data Explorer</h1>
+
+    <p class="subtitle">
+        Explore active stream monitoring stations with recent USGS discharge data.
+    </p>
+
+    <div class="card">
+
+        <h2>Monitoring Stations</h2>
+
+        <div id="selectedStation" class="selected-station">
+
+            <h3>Selected Station</h3>
+
+            <p>
+                <strong>Name:</strong>
+                <span id="selectedStationName"></span>
+            </p>
+
+            <p>
+                <strong>ID:</strong>
+                <span id="selectedStationId"></span>
+            </p>
+
+            <p>
+                <strong>Location:</strong>
+                <span id="selectedStationLocation"></span>
+            </p>
+
+            <div class="date-controls">
+
+                <div>
+                    <label for="startDate">Start date</label>
+                    <input type="date" id="startDate">
+                </div>
+
+                <div>
+                    <label for="endDate">End date</label>
+                    <input type="date" id="endDate">
+                </div>
+
+                <button type="button" id="loadData">
+                    Load data
+                </button>
+
+            </div>
+
+            <p id="dataStatus"></p>
+
+            <div id="dischargePlot" style="width: 100%; height: 420px; margin-top: 20px;"></div>
+
+        </div>
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Station</th>
+                        <th>County</th>
+                        <th>State</th>
+                        <th>Latest discharge</th>
+                        <th>Coordinates</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for location in locations %}
+
+                        {% set coords = location.geometry.coordinates if location.geometry else none %}
+
+                        <tr>
+
+                            <td>
+                                {{ location.name or location.id }}
+                            </td>
+
+                            <td>
+                                {{ location.county or "-" }}
+                            </td>
+
+                            <td>
+                                {{ location.state or "-" }}
+                            </td>
+
+                            <td>
+                                <div class="latest-value">
+                                    {% if location.value is not none %}
+                                        {{ location.value }}
+                                        {{ location.unit or "" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+
+                                {% if location.time %}
+                                    <div class="measurement-time">
+                                        {{ location.time }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if coords %}
+                                    {{ "%.4f"|format(coords[1]) }},
+                                    {{ "%.4f"|format(coords[0]) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <button
+                                    type="button"
+                                    class="select-station"
+                                    data-id="{{ location.id }}"
+                                    data-name="{{ location.name or location.id }}"
+                                    data-county="{{ location.county or '' }}"
+                                    data-state="{{ location.state or '' }}"
+                                    data-latitude="{{ coords[1] if coords else '' }}"
+                                    data-longitude="{{ coords[0] if coords else '' }}"
+                                >
+                                    Select
+                                </button>
+                            </td>
+
+                        </tr>
+
+                    {% else %}
+
+                        <tr>
+                            <td colspan="6" class="empty-message">
+                                No active stream monitoring stations were found.
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{{ url_for('static', filename='js/water.js') }}"></script>
+
+</body>
+</html>

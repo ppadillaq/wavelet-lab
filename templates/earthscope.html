@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>EarthScope Seismic Data</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .controls label {
+            margin-right: 5px;
+        }
+
+        .controls select {
+            max-width: 250px;
+        }
+        .controls input {
+            margin-right: 15px;
+            padding: 6px;
+        }
+
+        button {
+            padding: 7px 15px;
+            cursor: pointer;
+        }
+
+        .plot {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 400px;
+        }
+
+        .earthquake-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-bottom: 30px;
+        }
+
+        .earthquake-table th,
+        .earthquake-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .mag-low {
+            background-color: #fff3cd;
+        }
+
+        .mag-medium {
+            background-color: #f8a65b;
+        }
+
+        .mag-high {
+            background-color: #e76b6b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>EarthScope Seismic Data Explorer</h1>
+
+    <h2>Latest earthquakes</h2>
+
+    <p>
+        Source: USGS Earthquake Hazards Program (ComCat).
+        The table shows the most recent earthquakes worldwide within the
+        selected magnitude range, ordered from newest to oldest.
+    </p>
+
+    <form method="GET" class="controls">
+
+        <label for="earthquake_limit">Number of earthquakes:</label>
+        <select name="earthquake_limit" id="earthquake_limit">
+            {% for n in [5, 10, 20, 50, 100] %}
+                <option value="{{ n }}"
+                    {% if earthquake_limit == n %}selected{% endif %}>
+                    {{ n }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="min_magnitude">Minimum magnitude:</label>
+        <select name="min_magnitude" id="min_magnitude">
+            {% for m in [0, 1, 2, 3, 4, 4.5, 5, 6, 7, 8, 9] %}
+                <option value="{{ m }}"
+                    {% if min_magnitude == m %}selected{% endif %}>
+                    {{ m }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="max_magnitude">Maximum magnitude:</label>
+        <select name="max_magnitude" id="max_magnitude">
+            {% for m in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] %}
+                <option value="{{ m }}"
+                    {% if max_magnitude == m %}selected{% endif %}>
+                    {{ m }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Update</button>
+
+    </form>
+
+    {% if earthquake_error %}
+        <p style="color: #b00020;">
+            {{ earthquake_error }}
+        </p>
+    {% endif %}
+
+    <table class="earthquake-table">
+
+        <tr>
+            <th>Magnitude</th>
+            <th>Date & Time</th>
+            <th>Location</th>
+            <th>Depth (km)</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+        </tr>
+
+        {% for event in events %}
+        <tr>
+            <td class="
+                {% if event.magnitude >= 7 %}
+                    mag-high
+                {% elif event.magnitude >= 6 %}
+                    mag-medium
+                {% else %}
+                    mag-low
+                {% endif %}
+            ">
+                {{ event.magnitude }}
+            </td>
+
+            <td>{{ event.time }}</td>
+            <td>{{ event.place }}</td>
+            <td>{{ event.depth }}</td>
+            <td>{{ event.latitude }}</td>
+            <td>{{ event.longitude }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    <div class="controls">
+        <form method="POST">
+
+            <label for="network">Network:</label>
+            <select name="network" id="network">
+                {% for network in networks %}
+                    <option value="{{ network.code }}"
+                        {% if network.code == (selected_network or 'II') %}selected{% endif %}>
+                        {{ network.code }} - {{ network.description }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label for="station">Station:</label>
+            <select name="station" id="station"
+                    data-selected="{{ selected_station or '' }}">
+                <option value="">Select station</option>
+            </select>
+
+            <label for="channel">Channel:</label>
+            <select name="channel" id="channel"
+                    data-selected="{{ selected_channel or '' }}">
+                <option value="">Select channel</option>
+            </select>
+
+            <br><br>
+
+            <label for="start">Start:</label>
+            <input type="datetime-local" name="start" id="start"
+                value="{{ selected_start or '' }}">
+
+            <label for="end">End:</label>
+            <input type="datetime-local" name="end" id="end"
+                value="{{ selected_end or '' }}">
+
+            <button type="submit">Load data</button>
+
+            {% if times and values %}
+                <button type="button" id="openSignalLab">
+                    Open Signal Lab
+                </button>
+            {% endif %}
+
+        </form>
+  
+    </div>
+
+    <div class="plot">
+        <h2>Seismic waveform</h2>
+
+        {% if error %}
+            <p>{{ error }}</p>
+
+        {% elif times and values %}
+            <div id="waveformPlot"></div>
+
+            <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+            <script>
+                const times = {{ times | tojson }};
+                const values = {{ values | tojson }};
+
+                const trace = {
+                    x: times,
+                    y: values,
+                    type: 'scatter',
+                    mode: 'lines'
+                };
+
+                const layout = {
+                    xaxis: {
+                        title: 'Time'
+                    },
+                    yaxis: {
+                        title: 'Amplitude'
+                    }
+                };
+
+                Plotly.newPlot('waveformPlot', [trace], layout);
+
+            </script>
+
+        {% else %}
+            <p>Select a station and time interval to display data.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/earthscope.js') }}"></script>
+
+</body>
+</html>

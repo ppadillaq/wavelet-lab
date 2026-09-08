@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Signal Processing Lab</title>
+
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            border: none;
+            background: #e5e7eb;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .tab-button.active {
+            background: #222;
+            color: white;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .slider-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        #compression {
+            width: 100%;
+        }
+
+        .compression-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: #f7f7f7;
+            padding: 12px 18px;
+            border-radius: 6px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        #compressionPlot,
+        #cwtSignalPlot,
+        #cwtPlot {
+            width: 100%;
+        }
+
+        #compressionPlot {
+            height: 560px;
+        }
+
+        #cwtSignalPlot {
+            height: 300px;
+        }
+
+        #cwtPlot {
+            height: 520px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <a href="{{ url_for('earthscope') }}" class="back-link">
+        ← Back to EarthScope
+    </a>
+
+    <h1>Signal Processing Lab</h1>
+
+    <p class="subtitle">
+        Analysis of the selected seismic signal.
+    </p>
+
+    <div class="tabs">
+
+        <button
+            type="button"
+            class="tab-button active"
+            data-tab="compression-panel"
+        >
+            Compression
+        </button>
+
+        <button
+            type="button"
+            class="tab-button"
+            data-tab="cwt-panel"
+        >
+            CWT Analysis
+        </button>
+
+    </div>
+
+    <!-- Compression -->
+    <div id="compression-panel" class="tab-panel active">
+
+        <div class="card">
+
+            <h2>Wavelet Compression</h2>
+
+            <div class="controls-row">
+
+                <div class="slider-container">
+                    <label for="compression">
+                        Coefficients retained
+                    </label>
+
+                    <input
+                        type="range"
+                        id="compression"
+                        min="1"
+                        max="100"
+                        value="10"
+                        step="1"
+                    >
+                </div>
+
+                <div
+                    class="compression-value"
+                    id="compressionValue"
+                >
+                    10%
+                </div>
+
+            </div>
+
+            <div class="stats">
+
+                <div class="stat">
+                    <div class="stat-label">
+                        Retained coefficients
+                    </div>
+
+                    <div
+                        class="stat-value"
+                        id="coefficientsStat"
+                    >
+                        -
+                    </div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-label">
+                        Reconstruction RMSE
+                    </div>
+
+                    <div
+                        class="stat-value"
+                        id="rmseStat"
+                    >
+                        -
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card">
+            <h2>Signal Comparison</h2>
+            <div id="compressionPlot"></div>
+        </div>
+
+    </div>
+
+    <!-- CWT -->
+    <div id="cwt-panel" class="tab-panel">
+
+        <div class="card">
+
+            <h2>Continuous Wavelet Transform</h2>
+
+            <p>
+                Frequency-time analysis of the selected seismic signal.
+            </p>
+
+            <div class="wavelet-tabs">
+
+                <button
+                    type="button"
+                    class="wavelet-tab active"
+                    data-wavelet="cmor"
+                >
+                    Morlet
+                </button>
+
+                <button
+                    type="button"
+                    class="wavelet-tab"
+                    data-wavelet="mexh"
+                >
+                    Mexican Hat
+                </button>
+
+            </div>
+
+            <input
+                type="hidden"
+                id="wavelet"
+                value="cmor"
+            >
+
+            <div id="morlet-controls">
+
+                <label for="bandwidth">
+                    Bandwidth B
+                </label>
+
+                <input
+                    type="number"
+                    id="bandwidth"
+                    value="1.5"
+                    step="0.1"
+                    min="0.1"
+                >
+
+                <label for="center-frequency">
+                    Center frequency C
+                </label>
+
+                <input
+                    type="number"
+                    id="center-frequency"
+                    value="1.0"
+                    step="0.1"
+                    min="0.1"
+                >
+
+            </div>
+
+        </div>
+
+        <div class="card">
+            <h2>Original Signal</h2>
+            <div id="cwtSignalPlot"></div>
+        </div>
+
+        <div class="card">
+            <h2>Scalogram</h2>
+            <div id="cwtPlot"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    const times = {{ times | tojson }};
+    const originalSignal = {{ values | tojson }};
+</script>
+
+<script src="{{ url_for('static', filename='js/signal_lab.js') }}"></script>
+
+</body>
+</html>
