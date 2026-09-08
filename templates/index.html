@@ -1,11 +1,609 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wavelet Lab</title>
+    <title>Wavelet Lab — Explore. Analyse. Discover.</title>
+    <style>
+        :root {
+            --bg: #0b1018;
+            --surface: #121a26;
+            --surface-hover: #192434;
+            --border: #263345;
+            --text: #edf3fa;
+            --muted: #91a1b5;
+            --cyan: #65d6e8;
+            --blue: #829dff;
+            --green: #8ad9b2;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .container {
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 0 28px;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -.4px;
+        }
+
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #3d6574;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: var(--cyan);
+            font-size: 21px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .nav-links a:hover { color: var(--text); }
+
+        .hero {
+            padding: 94px 0 78px;
+            position: relative;
+        }
+
+        .eyebrow {
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            font-size: clamp(42px, 6vw, 70px);
+            line-height: 1.08;
+            letter-spacing: -3px;
+            margin: 0 0 24px;
+            max-width: 850px;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--cyan), var(--blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero p {
+            max-width: 630px;
+            color: var(--muted);
+            font-size: 17px;
+            margin: 0;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 32px;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background .2s, transform .2s;
+        }
+
+        .button:hover { transform: translateY(-2px); }
+
+        .button-primary {
+            background: var(--cyan);
+            color: #08131b;
+        }
+
+        .button-primary:hover { background: #8ae3f0; }
+
+        .button-secondary {
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .button-secondary:hover { background: var(--surface); }
+
+        .section-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .section-heading h2 {
+            font-size: 27px;
+            letter-spacing: -.8px;
+            margin: 0 0 5px;
+        }
+
+        .section-heading p {
+            color: var(--muted);
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .explorers { padding: 20px 0 85px; }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: border-color .2s, transform .2s, background .2s;
+        }
+
+        .card:hover {
+            border-color: #496174;
+            background: var(--surface-hover);
+            transform: translateY(-3px);
+        }
+
+        .card-visual {
+            height: 180px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .seismic-visual {
+            background:
+                radial-gradient(ellipse at 50% 80%, #183848 0%, transparent 65%),
+                #0e1a27;
+        }
+
+        .water-visual {
+            background:
+                radial-gradient(ellipse at 50% 80%, #193a39 0%, transparent 65%),
+                #0e1b25;
+        }
+
+        .grid-lines {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(#ffffff08 1px, transparent 1px),
+                linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+            background-size: 36px 36px;
+        }
+
+        .card-visual svg {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .card-body { padding: 25px; }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.3px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+
+        .card h3 {
+            font-size: 21px;
+            margin: 0 0 10px;
+            letter-spacing: -.5px;
+        }
+
+        .card p {
+            color: var(--muted);
+            font-size: 14px;
+            margin: 0 0 24px;
+            min-height: 66px;
+        }
+
+        .card-link {
+            color: var(--cyan);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .card-link span {
+            display: inline-block;
+            transition: transform .2s;
+        }
+
+        .card:hover .card-link span {
+            transform: translateX(4px);
+        }
+
+        .lab-section {
+            border-top: 1px solid var(--border);
+            padding: 75px 0;
+        }
+
+        .lab-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 70px;
+            align-items: center;
+        }
+
+        .lab-layout h2 {
+            font-size: 34px;
+            letter-spacing: -1.2px;
+            line-height: 1.2;
+            margin: 0 0 18px;
+        }
+
+        .lab-layout p {
+            color: var(--muted);
+            font-size: 15px;
+            margin: 0 0 25px;
+        }
+
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+        }
+
+        .feature {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 11px;
+            font-size: 12px;
+            color: #b9c8d9;
+        }
+
+        .lab-preview {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .preview-top {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 18px;
+        }
+
+        .preview-top span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #405065;
+        }
+
+        .preview-label {
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 1.3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .preview-plot {
+            height: 100px;
+            background: #0c1520;
+            border: 1px solid #203044;
+            border-radius: 5px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .preview-plot svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .scalogram {
+            height: 85px;
+            border-radius: 5px;
+            background:
+                radial-gradient(ellipse at 32% 45%, #b5c9ff 0%, #5473ba 9%, transparent 27%),
+                radial-gradient(ellipse at 68% 60%, #71d7d8 0%, #306c8c 12%, transparent 30%),
+                linear-gradient(90deg, #102139, #182b4b, #102139);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scalogram::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(#ffffff0a 1px, transparent 1px);
+            background-size: 100% 17px;
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 30px 0;
+            color: #718398;
+            font-size: 12px;
+        }
+
+        .footer-inner {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 700px) {
+            .container { padding: 0 20px; }
+            .nav { min-height: 66px; }
+            .nav-links { gap: 14px; font-size: 12px; }
+            .hero { padding: 65px 0 55px; }
+            h1 { letter-spacing: -2px; }
+            .cards, .lab-layout { grid-template-columns: 1fr; }
+            .lab-layout { gap: 35px; }
+            .card p { min-height: 0; }
+            .section-heading { align-items: start; }
+        }
+    </style>
 </head>
+
 <body>
-    
+
+<header>
+    <div class="container nav">
+        <a href="{{ url_for('home') }}" class="brand">
+            <div class="brand-mark">∿</div>
+            Wavelet Lab
+        </a>
+
+        <nav class="nav-links">
+            <a href="#explorers">Explorers</a>
+            <a href="#laboratory">The Lab</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+
+    <section class="hero">
+        <div class="container">
+            <div class="eyebrow">Interactive signal processing</div>
+
+            <h1>
+                Explore real data.<br>
+                <span class="gradient-text">Discover hidden patterns.</span>
+            </h1>
+
+            <p>
+                A hands-on laboratory for exploring real-world time series,
+                understanding their frequency content, and experimenting with
+                wavelet-based analysis and adaptive sampling.
+            </p>
+
+            <div class="hero-actions">
+                <a href="#explorers" class="button button-primary">
+                    Explore data <span>↗</span>
+                </a>
+                <a href="#laboratory" class="button button-secondary">
+                    Discover the lab <span>↓</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="explorers" id="explorers">
+        <div class="container">
+
+            <div class="section-heading">
+                <div>
+                    <h2>Data explorers</h2>
+                    <p>Choose a source and bring real measurements into the lab.</p>
+                </div>
+            </div>
+
+            <div class="cards">
+
+                <!-- EarthScope -->
+                <a href="{{ url_for('earthscope') }}" class="card">
+
+                    <div class="card-visual seismic-visual">
+                        <div class="grid-lines"></div>
+
+                        <svg viewBox="0 0 500 180" preserveAspectRatio="none" aria-hidden="true">
+                            <path
+                                d="M0 90 L55 90 L70 88 L78 94 L86 82 L94 102 L102 65 L110 125 L118 40 L126 145 L134 60 L142 112 L150 78 L158 98 L166 86 L174 92 L200 90 L240 90 L250 86 L258 98 L266 70 L274 116 L282 82 L290 96 L298 88 L320 90 L500 90"
+                                fill="none"
+                                stroke="#65d6e8"
+                                stroke-width="2"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M0 90 L55 90 L70 88 L78 94 L86 82 L94 102 L102 65 L110 125 L118 40 L126 145 L134 60 L142 112 L150 78 L158 98 L166 86 L174 92 L200 90 L240 90 L250 86 L258 98 L266 70 L274 116 L282 82 L290 96 L298 88 L320 90 L500 90 L500 180 L0 180 Z"
+                                fill="#65d6e8"
+                                opacity=".04"
+                            />
+                        </svg>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="card-meta">
+                            <span class="status-dot"></span>
+                            Seismic data
+                        </div>
+
+                        <h3>EarthScope Explorer</h3>
+
+                        <p>
+                            Discover seismic stations, retrieve waveform data,
+                            and investigate earthquakes through real ground-motion
+                            measurements.
+                        </p>
+
+                        <div class="card-link">
+                            Open explorer <span>→</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Water Data -->
+                <a href="{{ url_for('water.water') }}" class="card">
+
+                    <div class="card-visual water-visual">
+                        <div class="grid-lines"></div>
+
+                        <svg viewBox="0 0 500 180" preserveAspectRatio="none" aria-hidden="true">
+                            <path
+                                d="M0 130 C35 130 45 128 70 128 S105 126 125 125 S155 120 175 112 S205 85 225 62 S255 40 280 52 S315 82 340 96 S380 108 410 112 S460 115 500 116"
+                                fill="none"
+                                stroke="#8ad9b2"
+                                stroke-width="2.5"
+                            />
+                            <path
+                                d="M0 130 C35 130 45 128 70 128 S105 126 125 125 S155 120 175 112 S205 85 225 62 S255 40 280 52 S315 82 340 96 S380 108 410 112 S460 115 500 116 L500 180 L0 180 Z"
+                                fill="#8ad9b2"
+                                opacity=".07"
+                            />
+                            <line x1="0" y1="140" x2="500" y2="140" stroke="#8ad9b2" stroke-opacity=".12" stroke-dasharray="4 6"/>
+                        </svg>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="card-meta">
+                            <span class="status-dot"></span>
+                            Hydrological data
+                        </div>
+
+                        <h3>Water Data Explorer</h3>
+
+                        <p>
+                            Explore river monitoring stations and investigate
+                            water levels, streamflow, and the dynamics of
+                            changing hydrological conditions.
+                        </p>
+
+                        <div class="card-link">
+                            Open explorer <span>→</span>
+                        </div>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="lab-section" id="laboratory">
+        <div class="container lab-layout">
+
+            <div>
+                <div class="eyebrow">One laboratory · Multiple data sources</div>
+
+                <h2>From raw measurements to meaningful insight.</h2>
+
+                <p>
+                    Load a signal from any explorer and open it in the shared
+                    Signal Processing Lab. Compare representations, inspect
+                    time-frequency behaviour, and experiment with methods
+                    designed to reveal and respond to events.
+                </p>
+
+                <div class="features">
+                    <span class="feature">Wavelet compression</span>
+                    <span class="feature">CWT analysis</span>
+                    <span class="feature">Event detection · Planned</span>
+                    <span class="feature">Adaptive sampling · Planned</span>
+                </div>
+            </div>
+
+            <div class="lab-preview" aria-label="Illustration of a signal and scalogram">
+                <div class="preview-top">
+                    <span></span><span></span><span></span>
+                </div>
+
+                <div class="preview-label">Time-domain signal</div>
+
+                <div class="preview-plot">
+                    <svg viewBox="0 0 450 100" preserveAspectRatio="none" aria-hidden="true">
+                        <path
+                            d="M0 50 L40 50 L50 48 L58 53 L66 40 L74 65 L82 25 L90 80 L98 12 L106 90 L114 30 L122 70 L130 42 L138 58 L146 47 L154 52 L180 50 L230 50 L240 46 L248 60 L256 32 L264 75 L272 25 L280 68 L288 40 L296 55 L304 48 L320 50 L450 50"
+                            fill="none"
+                            stroke="#65d6e8"
+                            stroke-width="1.5"
+                        />
+                    </svg>
+                </div>
+
+                <div class="preview-label">Time-frequency representation</div>
+                <div class="scalogram"></div>
+            </div>
+
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <div class="container footer-inner">
+        <span>Wavelet Lab · Interactive signal analysis</span>
+        <span>Built with Python, Flask &amp; PyWavelets</span>
+    </div>
+</footer>
+
 </body>
 </html>
