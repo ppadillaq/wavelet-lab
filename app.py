@@ -3,8 +3,6 @@ import numpy as np
 import pywt
 
 from flask import Flask, render_template, request
-from forms import MyForm
-from image_processing import ImageDecomp
 from datetime import datetime, timezone
 from uuid import uuid4
 from flask import session, redirect, url_for
@@ -21,20 +19,20 @@ signal_store = {}
 def home():
     return render_template('index.html')
 
-@app.route('/form', methods=['GET', 'POST'])
-def form():
-    form = MyForm()
-    if request.method == 'POST' and form.validate_on_submit():
-        name = form.name.data
-        email = form.email.data
-        return render_template('success.html', name=name, email=email)
-    return render_template('form.html', form=form)
+# @app.route('/form', methods=['GET', 'POST'])
+# def form():
+#     form = MyForm()
+#     if request.method == 'POST' and form.validate_on_submit():
+#         name = form.name.data
+#         email = form.email.data
+#         return render_template('success.html', name=name, email=email)
+#     return render_template('form.html', form=form)
 
-@app.route('/2D')
-def ImageProc():
-    imageProc = ImageDecomp()
-    LH = imageProc.get2D()
-    return render_template('image_processing.html', data=LH.tolist())
+# @app.route('/2D')
+# def ImageProc():
+#     imageProc = ImageDecomp()
+#     LH = imageProc.get2D()
+#     return render_template('image_processing.html', data=LH.tolist())
 
 @app.route('/earthscope', methods=['GET', 'POST'])
 def earthscope():
