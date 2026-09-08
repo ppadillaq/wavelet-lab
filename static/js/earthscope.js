@@ -94,88 +94,27 @@ window.addEventListener("DOMContentLoaded", async function () {
     }
 });
 
-const cwtPlot = document.getElementById("cwtPlot");
+const labButton = document.getElementById("openSignalLab");
 
-async function updateCWT() {
+if (labButton) {
 
-    if (!cwtPlot) {
-        return;
-    }
+    labButton.addEventListener("click", async function () {
 
-    Plotly.purge("cwtPlot");
+        const response = await fetch("/save-signal", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                times: times,
+                values: values
+            })
+        });
 
-    const values = JSON.parse(cwtPlot.dataset.values);
+        const data = await response.json();
 
-    if (!values || values.length === 0) {
-        return;
-    }
-
-    const bandwidth = parseFloat(
-        document.getElementById("bandwidth").value
-    );
-
-    const centerFrequency = parseFloat(
-        document.getElementById("center-frequency").value
-    );
-
-    const response = await fetch("/cwt", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            wavelet: waveletInput.value,
-            values: values,
-            bandwidth: bandwidth,
-            center_frequency: centerFrequency
-        })
-    });
-
-    const data = await response.json();
-
-    const trace = {
-        z: data.coefficients,
-        y: data.frequencies,
-        type: "heatmap",
-        colorscale: "Viridis"
-    };
-
-    const layout = {
-        title: "CWT Scalogram",
-        xaxis: {
-            title: "Time"
-        },
-        yaxis: {
-            title: "Frequency [Hz]"
+        if (data.redirect) {
+            window.location.href = data.redirect;
         }
-    };
-
-    Plotly.newPlot("cwtPlot", [trace], layout);
+    });
 }
-
-updateCWT();
-
-document.getElementById("bandwidth").addEventListener("change", updateCWT);
-
-document.getElementById("center-frequency").addEventListener("change", updateCWT);
-
-const waveletTabs = document.querySelectorAll(".wavelet-tab");
-const waveletInput = document.getElementById("wavelet");
-const morletControls = document.getElementById("morlet-controls");
-
-waveletTabs.forEach(tab => {
-    tab.addEventListener("click", function () {
-
-        waveletTabs.forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-
-        waveletInput.value = tab.dataset.wavelet;
-        updateCWT();
-
-        if (tab.dataset.wavelet === "cmor") {
-            morletControls.style.display = "block";
-        } else {
-            morletControls.style.display = "none";
-        }
-    });
-});
