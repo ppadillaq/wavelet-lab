@@ -89,9 +89,51 @@
 
     <p>
         Source: USGS Earthquake Hazards Program (ComCat).
-        The table shows the 10 most recent earthquakes worldwide with a magnitude
-        of 6.0 or greater, ordered from newest to oldest.
+        The table shows the most recent earthquakes worldwide within the
+        selected magnitude range, ordered from newest to oldest.
     </p>
+
+    <form method="GET" class="controls">
+
+        <label for="earthquake_limit">Number of earthquakes:</label>
+        <select name="earthquake_limit" id="earthquake_limit">
+            {% for n in [5, 10, 20, 50, 100] %}
+                <option value="{{ n }}"
+                    {% if earthquake_limit == n %}selected{% endif %}>
+                    {{ n }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="min_magnitude">Minimum magnitude:</label>
+        <select name="min_magnitude" id="min_magnitude">
+            {% for m in [0, 1, 2, 3, 4, 4.5, 5, 6, 7, 8, 9] %}
+                <option value="{{ m }}"
+                    {% if min_magnitude == m %}selected{% endif %}>
+                    {{ m }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="max_magnitude">Maximum magnitude:</label>
+        <select name="max_magnitude" id="max_magnitude">
+            {% for m in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] %}
+                <option value="{{ m }}"
+                    {% if max_magnitude == m %}selected{% endif %}>
+                    {{ m }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Update</button>
+
+    </form>
+
+    {% if earthquake_error %}
+        <p style="color: #b00020;">
+            {{ earthquake_error }}
+        </p>
+    {% endif %}
 
     <table class="earthquake-table">
 

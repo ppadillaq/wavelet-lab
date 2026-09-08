@@ -130,14 +130,27 @@ def earthscope():
 
     usgs_url = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 
+    earthquake_limit = request.args.get("earthquake_limit", 10, type=int)
+    min_magnitude = request.args.get("min_magnitude", 4.5, type=float)
+    max_magnitude = request.args.get("max_magnitude", 10.0, type=float)
+
     usgs_params = {
         "format": "geojson",
-        "limit": 10,
+        "limit": earthquake_limit,
         "orderby": "time",
-        "minmagnitude": 4.5
+        "minmagnitude": min_magnitude,
+        "maxmagnitude": max_magnitude
     }
 
-    usgs_response = requests.get(usgs_url, params=usgs_params)
+    earthquake_error = None
+
+    if min_magnitude > max_magnitude:
+        earthquake_error = (
+            "Minimum magnitude cannot be greater than maximum magnitude."
+        )
+
+    if earthquake_error is None:
+        usgs_response = requests.get(usgs_url, params=usgs_params)
 
     if usgs_response.ok:
         for feature in usgs_response.json()["features"]:
@@ -170,6 +183,10 @@ def earthscope():
         selected_start=request.form.get('start'),
         selected_end=request.form.get('end'),
         raw_values=values if request.method == 'POST' and response.ok else None,
+        earthquake_limit=earthquake_limit,
+        min_magnitude=min_magnitude,
+        max_magnitude=max_magnitude,
+        earthquake_error=earthquake_error,
     )
 
 @app.route('/stations/<network>')
