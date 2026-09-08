@@ -6,9 +6,16 @@ from flask import Flask, render_template, request
 from forms import MyForm
 from image_processing import ImageDecomp
 from datetime import datetime, timezone
+from uuid import uuid4
+from flask import session, redirect, url_for
+from routes.water import water_bp
 
 app = Flask(__name__)
 app.secret_key = 'sepersecretkey'
+
+app.register_blueprint(water_bp)
+
+signal_store = {}
 
 @app.route('/')
 def home():
@@ -88,6 +95,10 @@ def earthscope():
 
         if response.ok:
             lines = response.text.splitlines()
+
+            for line in lines:
+                if line.startswith("#"):
+                    print(line)
 
             times = []
             values = []
@@ -281,6 +292,126 @@ def calculate_cwt():
     return {
         "coefficients": np.log1p(np.abs(coefficients)).tolist(),
         "frequencies": frequencies.tolist()
+    }
+
+@app.route('/save-signal', methods=['POST'])
+def save_signal():
+
+    data = request.get_json()
+
+    values = data.get('values')
+    times = data.get('times')
+
+    if not values:
+        return {"error": "No signal data available"}, 400
+
+    signal_id = str(uuid4())
+
+    signal_store[signal_id] = {
+        "values": values,
+        "times": times
+    }
+
+    session["signal_id"] = signal_id
+
+    return {
+        "redirect": url_for("signal_lab")
+    }
+
+@app.route('/signal-lab')
+def signal_lab():
+
+    signal_id = session.get("signal_id")
+
+    if not signal_id or signal_id not in signal_store:
+        return redirect(url_for("earthscope"))
+
+    signal_data = signal_store[signal_id]
+
+    return render_template(
+        "signal_lab.html",
+        values=signal_data["values"],
+        times=signal_data["times"]
+    )
+
+@app.route('/compress-signal', methods=['POST'])
+def compress_signal():
+
+    data = request.get_json()
+
+    signal_id = session.get("signal_id")
+
+    if not signal_id or signal_id not in signal_store:
+        return {"error": "No signal loaded"}, 400
+
+    values = np.array(
+        signal_store[signal_id]["values"],
+        dtype=float
+    )
+
+    retain_fraction = float(
+        data.get("retain_fraction", 0.10)
+    )
+
+    # Limitar entre 1 % y 100 %
+    retain_fraction = np.clip(
+        retain_fraction,
+        0.01,
+        1.0
+    )
+
+    wavelet = "db4"
+
+    coeffs = pywt.wavedec(
+        values,
+        wavelet
+    )
+
+    all_coeffs = np.concatenate(
+        [c.ravel() for c in coeffs]
+    )
+
+    threshold = np.quantile(
+        np.abs(all_coeffs),
+        1 - retain_fraction
+    )
+
+    coeffs_compressed = [
+        pywt.threshold(
+            c,
+            threshold,
+            mode="hard"
+        )
+        for c in coeffs
+    ]
+
+    reconstructed = pywt.waverec(
+        coeffs_compressed,
+        wavelet
+    )
+
+    reconstructed = reconstructed[:len(values)]
+
+    n_total = sum(
+        c.size for c in coeffs
+    )
+
+    n_nonzero = sum(
+        np.count_nonzero(c)
+        for c in coeffs_compressed
+    )
+
+    rmse = np.sqrt(
+        np.mean(
+            (values - reconstructed) ** 2
+        )
+    )
+
+    return {
+        "compressed": reconstructed.tolist(),
+        "coefficients_retained": n_nonzero,
+        "coefficients_total": n_total,
+        "rmse": float(rmse)
     }
 
 if __name__ == "__main__":
