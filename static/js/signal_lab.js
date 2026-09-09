@@ -852,8 +852,13 @@ async function applySVMDetection() {
             );
         }
 
-        const eventTimes =
-            data.event_indices.map(index =>
+        const externalTimes =
+            data.external_indices.map(index =>
+                times[index]
+            );
+
+        const internalTimes =
+            data.internal_indices.map(index =>
                 times[index]
             );
 
@@ -900,15 +905,27 @@ async function applySVMDetection() {
             }
         };
 
-        const eventTrace = {
-            x: eventTimes,
-            y: data.event_values,
+        const externalTrace = {
+            x: externalTimes,
+            y: data.external_values,
             type: "scatter",
             mode: "markers",
-            name: "Detected events",
+            name: "External SV (ESV)",
             marker: {
                 size: 8,
                 color: "red"
+            }
+        };
+
+        const internalTrace = {
+            x: internalTimes,
+            y: data.internal_values,
+            type: "scatter",
+            mode: "markers",
+            name: "Internal SV (ISV)",
+            marker: {
+                size: 8,
+                symbol: "circle-open"
             }
         };
 
@@ -944,7 +961,8 @@ async function applySVMDetection() {
                 predictionTrace,
                 upperTrace,
                 lowerTrace,
-                eventTrace
+                internalTrace,
+                externalTrace
             ],
             layout,
             {
@@ -956,13 +974,13 @@ async function applySVMDetection() {
             data.total_samples;
 
         svmEventCount.textContent =
-            data.event_count;
+            data.external_count;
 
         svmEventPercent.textContent =
             `${data.event_percent.toFixed(1)}%`;
 
         svmStatus.textContent =
-            `${data.event_count} events detected.`;
+            `${data.external_count} external support vectors detected.`;
 
     } catch (error) {
 
