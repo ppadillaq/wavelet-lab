@@ -122,14 +122,9 @@
             margin-top: 3px;
         }
 
-        #compressionPlot,
         #cwtSignalPlot,
         #cwtPlot {
             width: 100%;
-        }
-
-        #compressionPlot {
-            height: 560px;
         }
 
         #cwtSignalPlot {
@@ -139,6 +134,100 @@
         #cwtPlot {
             height: 520px;
         }
+
+        .tabs {
+            flex-wrap: wrap;
+        }
+
+        #eventSamplingPlot {
+            width: 100%;
+            height: 500px;
+        }
+
+        #samplingStatus {
+            color: #666;
+            margin-top: 15px;
+        }
+
+        #samplingAlgorithm,
+        #samplingThreshold,
+        #preprocessingMethod {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-top: 5px;
+        }
+
+        #applySampling {
+            background: #0f766e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 9px 16px;
+            cursor: pointer;
+        }
+
+        #applySampling:hover {
+            background: #115e59;
+        }
+
+        .wavelet-preprocessing {
+            margin: 20px 0;
+            padding: 16px;
+            background: #f7f7f7;
+            border-radius: 8px;
+        }
+
+        .wavelet-preprocessing label {
+            font-size: 14px;
+        }
+
+        #filterRetainFraction {
+            width: 250px;
+            max-width: 100%;
+            vertical-align: middle;
+            margin: 0 12px;
+        }
+
+        .event-mode-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .event-mode-button {
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: #f3f4f6;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .event-mode-button.active {
+            background: #0f766e;
+            color: white;
+            border-color: #0f766e;
+        }
+
+        .event-mode-panel {
+            display: none;
+        }
+
+        .event-mode-panel.active {
+            display: block;
+        }
+
+        #svmEventPlot {
+            width: 100%;
+            height: 500px;
+        }
+
+        #svmStatus {
+            color: #6b7280;
+            font-size: 14px;
+        }
     </style>
 </head>
 
@@ -146,8 +235,8 @@
 
 <div class="container">
 
-    <a href="{{ url_for('earthscope') }}" class="back-link">
-        ← Back to EarthScope
+    <a href="{{ back_url }}" class="back-link">
+        ← Back to {{ back_label }}
     </a>
 
     <h1>Signal Processing Lab</h1>
@@ -161,95 +250,23 @@
         <button
             type="button"
             class="tab-button active"
-            data-tab="compression-panel"
-        >
-            Compression
-        </button>
-
-        <button
-            type="button"
-            class="tab-button"
             data-tab="cwt-panel"
         >
             CWT Analysis
         </button>
 
-    </div>
-
-    <!-- Compression -->
-    <div id="compression-panel" class="tab-panel active">
-
-        <div class="card">
-
-            <h2>Wavelet Compression</h2>
-
-            <div class="controls-row">
-
-                <div class="slider-container">
-                    <label for="compression">
-                        Coefficients retained
-                    </label>
-
-                    <input
-                        type="range"
-                        id="compression"
-                        min="1"
-                        max="100"
-                        value="10"
-                        step="1"
-                    >
-                </div>
-
-                <div
-                    class="compression-value"
-                    id="compressionValue"
-                >
-                    10%
-                </div>
-
-            </div>
-
-            <div class="stats">
-
-                <div class="stat">
-                    <div class="stat-label">
-                        Retained coefficients
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="coefficientsStat"
-                    >
-                        -
-                    </div>
-                </div>
-
-                <div class="stat">
-                    <div class="stat-label">
-                        Reconstruction RMSE
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="rmseStat"
-                    >
-                        -
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="card">
-            <h2>Signal Comparison</h2>
-            <div id="compressionPlot"></div>
-        </div>
+        <button
+            type="button"
+            class="tab-button"
+            data-tab="event-panel"
+        >
+            Event Detection
+        </button>
 
     </div>
 
     <!-- CWT -->
-    <div id="cwt-panel" class="tab-panel">
+    <div id="cwt-panel" class="tab-panel active">
 
         <div class="card">
 
@@ -323,6 +340,235 @@
         <div class="card">
             <h2>Scalogram</h2>
             <div id="cwtPlot"></div>
+        </div>
+
+    </div>
+
+    <!-- Event Detection -->
+    <div id="event-panel" class="tab-panel">
+
+        <div class="event-mode-tabs">
+            <button type="button"
+                    class="event-mode-button active"
+                    data-event-mode="sampling-mode">
+                Event-based sampling
+            </button>
+
+            <button type="button"
+                    class="event-mode-button"
+                    data-event-mode="svm-mode">
+                SVM event detection
+            </button>
+        </div>
+
+        <div id="sampling-mode" class="event-mode-panel active">
+
+        <div class="card">
+
+            <h2>Event-Based Sampling</h2>
+
+            <p>
+                Explore event-driven sampling algorithms and compare
+                the transmitted samples with the original signal.
+            </p>
+
+            <div class="wavelet-preprocessing">
+
+                <label for="preprocessingMethod">
+                    Preprocessing
+                </label>
+
+                <select id="preprocessingMethod">
+                    <option value="none">None</option>
+                    <option value="denoising">Wavelet denoising</option>
+                    <option value="compression">Wavelet compression</option>
+                </select>
+
+                <!-- Wavelet denoising controls -->
+                <div id="denoisingControls"
+                    style="display: none; margin-top: 12px;">
+
+                    <label for="denoisingStrength">
+                        Denoising strength
+                    </label>
+
+                    <input
+                        type="range"
+                        id="denoisingStrength"
+                        min="0"
+                        max="100"
+                        value="50"
+                        step="1"
+                    >
+
+                    <span id="denoisingStrengthValue">50%</span>
+
+                </div>
+
+                <!-- Wavelet compression controls -->
+                <div id="compressionPreprocessingControls"
+                    style="display: none; margin-top: 12px;">
+
+                    <label for="preprocessingCompression">
+                        Coefficients retained
+                    </label>
+
+                    <input
+                        type="range"
+                        id="preprocessingCompression"
+                        min="1"
+                        max="100"
+                        value="50"
+                        step="1"
+                    >
+
+                    <span id="preprocessingCompressionValue">50%</span>
+
+                    <div class="stats" style="margin-top: 16px;">
+
+                        <div>
+                            <strong id="preprocessingCoefficientsStat">—</strong>
+                            <span>Retained coefficients</span>
+                        </div>
+
+                        <div>
+                            <strong id="preprocessingRmseStat">—</strong>
+                            <span>Reconstruction RMSE</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="controls-row">
+
+                <div>
+                    <label for="samplingAlgorithm">
+                        Algorithm
+                    </label>
+
+                    <select id="samplingAlgorithm">
+                        <option value="send_on_delta">
+                            Send-on-Delta
+                        </option>
+                        <option value="energy_domain">
+                            Energy-domain sampling
+                        </option>
+                        <option value="predictive_send_on_delta">
+                            Send-on-Delta with Linear Predictor
+                        </option>
+                        <option value="integral_criterion">
+                            Integral criterion
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="samplingThreshold">
+                        Threshold Δ
+                    </label>
+
+                    <input
+                        type="number"
+                        id="samplingThreshold"
+                        value="1"
+                        min="0"
+                        step="any"
+                    >
+                </div>
+
+                <button type="button" id="applySampling">
+                    Apply sampling
+                </button>
+
+            </div>
+
+            <p id="samplingStatus"></p>
+
+            <div class="stats">
+
+                <div class="stat">
+                    <div class="stat-label">Original samples</div>
+                    <div class="stat-value" id="originalSamplesStat">-</div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-label">Transmitted samples</div>
+                    <div class="stat-value" id="transmittedSamplesStat">-</div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-label">Reduction</div>
+                    <div class="stat-value" id="samplingReductionStat">-</div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card">
+            <h2>Sampling Comparison</h2>
+            <div id="eventSamplingPlot"></div>
+        </div>
+
+        </div>
+
+        <div id="svm-mode" class="event-mode-panel">
+            <div class="card">
+                <h2>SVM Event Detection</h2>
+                <p>
+                    Detect events as observations that fall outside
+                    the epsilon-insensitive tube of an SVR model.
+                </p>
+
+                <div class="controls-row">
+                    <div>
+                        <label for="svmC">C</label>
+                        <input type="number" id="svmC"
+                            value="100" min="0" step="any">
+                    </div>
+
+                    <div>
+                        <label for="svmGamma">Gamma</label>
+                        <input type="number" id="svmGamma"
+                            value="0.1" min="0" step="any">
+                    </div>
+
+                    <div>
+                        <label for="svmEpsilon">Epsilon</label>
+                        <input type="number" id="svmEpsilon"
+                            value="20" min="0" step="any">
+                    </div>
+
+                    <button type="button" id="applySVM">
+                        Detect events
+                    </button>
+                </div>
+
+                <p id="svmStatus"></p>
+
+                <div class="stats">
+                    <div>
+                        <strong id="svmTotalSamples">—</strong>
+                        <span>Total samples</span>
+                    </div>
+                    <div>
+                        <strong id="svmEventCount">—</strong>
+                        <span>Detected events</span>
+                    </div>
+                    <div>
+                        <strong id="svmEventPercent">—</strong>
+                        <span>Event percentage</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>SVR Model and Detected Events</h2>
+                <div id="svmEventPlot"></div>
+            </div>
         </div>
 
     </div>

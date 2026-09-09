@@ -24,6 +24,11 @@ const loadDataButton =
 const dataStatus =
     document.getElementById("dataStatus");
 
+const openSignalLabButton =
+    document.getElementById("openSignalLab");
+
+let currentSignal = null;
+
 
 let currentStationId = null;
 
@@ -53,6 +58,9 @@ stationButtons.forEach(button => {
     button.addEventListener("click", function () {
 
         currentStationId = button.dataset.id;
+
+        currentSignal = null;
+        openSignalLabButton.disabled = true;
 
         const name = button.dataset.name;
         const county = button.dataset.county;
@@ -88,6 +96,9 @@ loadDataButton.addEventListener("click", async function () {
     if (!currentStationId) {
         return;
     }
+
+    currentSignal = null;
+    openSignalLabButton.disabled = true;
 
     const start = startDate.value;
     const end = endDate.value;
@@ -144,6 +155,13 @@ loadDataButton.addEventListener("click", async function () {
         const times = observations.map(obs => obs.time);
         const values = observations.map(obs => obs.value);
 
+        currentSignal = {
+            times: times,
+            values: values
+        };
+
+        openSignalLabButton.disabled = false;
+
         Plotly.newPlot("dischargePlot", [{
             x: times,
             y: values,
@@ -190,6 +208,47 @@ loadDataButton.addEventListener("click", async function () {
         dataStatus.textContent =
             `Error: ${error.message}`;
 
+    }
+
+});
+
+/* -------------------------------------------------
+   Open signal in Signal Lab
+------------------------------------------------- */
+
+openSignalLabButton.addEventListener("click", async function () {
+
+    if (!currentSignal) {
+        return;
+    }
+
+    openSignalLabButton.disabled = true;
+    dataStatus.textContent = "Opening Signal Lab...";
+
+    try {
+        const response = await fetch("/save-signal", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                ...currentSignal,
+                source: "water"
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Unable to save signal.");
+        }
+
+        window.location.href = data.redirect;
+
+    } catch (error) {
+        console.error(error);
+        dataStatus.textContent = `Error: ${error.message}`;
+        openSignalLabButton.disabled = false;
     }
 
 });
