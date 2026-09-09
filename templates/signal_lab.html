@@ -122,14 +122,9 @@
             margin-top: 3px;
         }
 
-        #compressionPlot,
         #cwtSignalPlot,
         #cwtPlot {
             width: 100%;
-        }
-
-        #compressionPlot {
-            height: 560px;
         }
 
         #cwtSignalPlot {
@@ -155,7 +150,8 @@
         }
 
         #samplingAlgorithm,
-        #samplingThreshold {
+        #samplingThreshold,
+        #preprocessingMethod {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 6px;
@@ -254,14 +250,6 @@
         <button
             type="button"
             class="tab-button active"
-            data-tab="compression-panel"
-        >
-            Compression
-        </button>
-
-        <button
-            type="button"
-            class="tab-button"
             data-tab="cwt-panel"
         >
             CWT Analysis
@@ -277,80 +265,8 @@
 
     </div>
 
-    <!-- Compression -->
-    <div id="compression-panel" class="tab-panel active">
-
-        <div class="card">
-
-            <h2>Wavelet Compression</h2>
-
-            <div class="controls-row">
-
-                <div class="slider-container">
-                    <label for="compression">
-                        Coefficients retained
-                    </label>
-
-                    <input
-                        type="range"
-                        id="compression"
-                        min="1"
-                        max="100"
-                        value="10"
-                        step="1"
-                    >
-                </div>
-
-                <div
-                    class="compression-value"
-                    id="compressionValue"
-                >
-                    10%
-                </div>
-
-            </div>
-
-            <div class="stats">
-
-                <div class="stat">
-                    <div class="stat-label">
-                        Retained coefficients
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="coefficientsStat"
-                    >
-                        -
-                    </div>
-                </div>
-
-                <div class="stat">
-                    <div class="stat-label">
-                        Reconstruction RMSE
-                    </div>
-
-                    <div
-                        class="stat-value"
-                        id="rmseStat"
-                    >
-                        -
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="card">
-            <h2>Signal Comparison</h2>
-            <div id="compressionPlot"></div>
-        </div>
-
-    </div>
-
     <!-- CWT -->
-    <div id="cwt-panel" class="tab-panel">
+    <div id="cwt-panel" class="tab-panel active">
 
         <div class="card">
 
@@ -457,27 +373,73 @@
             </p>
 
             <div class="wavelet-preprocessing">
-                <label>
-                    <input type="checkbox" id="enableWaveletFiltering">
-                    Enable wavelet filtering
+
+                <label for="preprocessingMethod">
+                    Preprocessing
                 </label>
 
-                <div id="waveletFilteringControls" style="display: none; margin-top: 12px;">
-                    <label for="filterRetainFraction">
+                <select id="preprocessingMethod">
+                    <option value="none">None</option>
+                    <option value="denoising">Wavelet denoising</option>
+                    <option value="compression">Wavelet compression</option>
+                </select>
+
+                <!-- Wavelet denoising controls -->
+                <div id="denoisingControls"
+                    style="display: none; margin-top: 12px;">
+
+                    <label for="denoisingStrength">
+                        Denoising strength
+                    </label>
+
+                    <input
+                        type="range"
+                        id="denoisingStrength"
+                        min="0"
+                        max="100"
+                        value="50"
+                        step="1"
+                    >
+
+                    <span id="denoisingStrengthValue">50%</span>
+
+                </div>
+
+                <!-- Wavelet compression controls -->
+                <div id="compressionPreprocessingControls"
+                    style="display: none; margin-top: 12px;">
+
+                    <label for="preprocessingCompression">
                         Coefficients retained
                     </label>
 
                     <input
                         type="range"
-                        id="filterRetainFraction"
+                        id="preprocessingCompression"
                         min="1"
                         max="100"
                         value="50"
                         step="1"
                     >
 
-                    <span id="filterRetainValue">50%</span>
+                    <span id="preprocessingCompressionValue">50%</span>
+
+                    <div class="stats" style="margin-top: 16px;">
+
+                        <div>
+                            <strong id="preprocessingCoefficientsStat">—</strong>
+                            <span>Retained coefficients</span>
+                        </div>
+
+                        <div>
+                            <strong id="preprocessingRmseStat">—</strong>
+                            <span>Reconstruction RMSE</span>
+                        </div>
+
+                    </div>
+
                 </div>
+
             </div>
 
             <div class="controls-row">
