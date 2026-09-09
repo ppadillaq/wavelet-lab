@@ -78,121 +78,6 @@ eventModeButtons.forEach(button => {
 
 
 // --------------------------------------------------
-// Compression
-// --------------------------------------------------
-
-const slider =
-    document.getElementById("compression");
-
-const compressionValue =
-    document.getElementById("compressionValue");
-
-const coefficientsStat =
-    document.getElementById("coefficientsStat");
-
-const rmseStat =
-    document.getElementById("rmseStat");
-
-
-async function updateCompression() {
-
-    const percentage =
-        parseInt(slider.value);
-
-    compressionValue.textContent =
-        `${percentage}%`;
-
-    const response = await fetch(
-        "/compress-signal",
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                retain_fraction:
-                    percentage / 100
-            })
-        }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        console.error(data);
-        return;
-    }
-
-    const originalTrace = {
-        x: times,
-        y: originalSignal,
-        type: "scatter",
-        mode: "lines",
-        name: "Original signal"
-    };
-
-    const compressedTrace = {
-        x: times,
-        y: data.compressed,
-        type: "scatter",
-        mode: "lines",
-        name: "Compressed signal"
-    };
-
-    const layout = {
-        margin: {
-            l: 70,
-            r: 30,
-            t: 30,
-            b: 70
-        },
-
-        xaxis: {
-            title: "Time"
-        },
-
-        yaxis: {
-            title: "Amplitude"
-        },
-
-        legend: {
-            orientation: "h",
-            x: 0,
-            y: 1.08
-        },
-
-        hovermode: "x unified"
-    };
-
-    Plotly.react(
-        "compressionPlot",
-        [
-            originalTrace,
-            compressedTrace
-        ],
-        layout,
-        {
-            responsive: true
-        }
-    );
-
-    coefficientsStat.textContent =
-        `${data.coefficients_retained} / ${data.coefficients_total}`;
-
-    rmseStat.textContent =
-        data.rmse.toExponential(3);
-}
-
-
-slider.addEventListener(
-    "input",
-    updateCompression
-);
-
-
-// --------------------------------------------------
 // CWT - original signal only for now
 // --------------------------------------------------
 
@@ -365,57 +250,108 @@ document
 // Optional wavelet filtering
 // --------------------------------------------------
 
-const enableWaveletFiltering =
-    document.getElementById("enableWaveletFiltering");
+const preprocessingMethod =
+    document.getElementById("preprocessingMethod");
 
-const waveletFilteringControls =
-    document.getElementById("waveletFilteringControls");
+const denoisingControls =
+    document.getElementById("denoisingControls");
 
-const filterRetainFraction =
-    document.getElementById("filterRetainFraction");
+const denoisingStrength =
+    document.getElementById("denoisingStrength");
 
-const filterRetainValue =
-    document.getElementById("filterRetainValue");
+const denoisingStrengthValue =
+    document.getElementById("denoisingStrengthValue");
+
+const compressionPreprocessingControls =
+    document.getElementById("compressionPreprocessingControls");
+
+const preprocessingCompression =
+    document.getElementById("preprocessingCompression");
+
+const preprocessingCompressionValue =
+    document.getElementById("preprocessingCompressionValue");
+
+const preprocessingCoefficientsStat =
+    document.getElementById("preprocessingCoefficientsStat");
+
+const preprocessingRmseStat =
+    document.getElementById("preprocessingRmseStat");
 
 
-let filteredSignal = null;
+async function updatePreprocessing() {
 
-async function updateWaveletFiltering() {
+    const method = preprocessingMethod.value;
 
-    waveletFilteringControls.style.display =
-        enableWaveletFiltering.checked ? "block" : "none";
+    denoisingControls.style.display =
+        method === "denoising" ? "block" : "none";
 
-    if (!enableWaveletFiltering.checked) {
-        filteredSignal = null;
+    compressionPreprocessingControls.style.display =
+        method === "compression" ? "block" : "none";
+
+    if (method === "none") {
         plotOriginalEventSignal();
+        samplingStatus.textContent = "";
         return;
     }
 
-    samplingStatus.textContent =
-        "Applying wavelet filtering...";
-
     try {
 
-        const response = await fetch("/compress-signal", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                retain_fraction:
-                    parseInt(filterRetainFraction.value) / 100
-            })
-        });
+        let processedSignal;
+        let traceName;
 
-        const data = await response.json();
+        if (method === "denoising") {
 
-        if (!response.ok) {
-            throw new Error(
-                data.error || "Unable to filter signal."
+            samplingStatus.textContent =
+                "Applying wavelet denoising...";
+
+            const result = await getDenoisedSignal();
+
+            processedSignal = result.denoised;
+            traceName = "Wavelet denoised";
+
+            samplingStatus.textContent =
+                `Wavelet denoising applied (strength = ${denoisingStrength.value}%).`;
+
+        } else if (method === "compression") {
+
+            samplingStatus.textContent =
+                "Applying wavelet compression...";
+
+            const response = await fetch(
+                "/compress-signal",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        retain_fraction:
+                            parseInt(preprocessingCompression.value) / 100
+                    })
+                }
             );
-        }
 
-        filteredSignal = data.compressed;
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.error ||
+                    "Unable to apply wavelet compression."
+                );
+            }
+
+            processedSignal = result.compressed;
+            traceName = "Compressed signal";
+
+            preprocessingCoefficientsStat.textContent =
+                `${result.coefficients_retained} / ${result.coefficients_total}`;
+
+            preprocessingRmseStat.textContent =
+                result.rmse.toExponential(3);
+
+            samplingStatus.textContent =
+                `Wavelet compression applied (${preprocessingCompression.value}% retained).`;
+        }
 
         Plotly.react(
             "eventSamplingPlot",
@@ -429,32 +365,30 @@ async function updateWaveletFiltering() {
                 },
                 {
                     x: times,
-                    y: filteredSignal,
+                    y: processedSignal,
                     type: "scatter",
                     mode: "lines",
-                    name: "Wavelet filtered",
+                    name: traceName,
                     line: {
                         dash: "dash"
                     }
                 }
             ],
             {
-                margin: { l: 70, r: 30, t: 30, b: 70 },
-                xaxis: { title: "Time" },
-                yaxis: { title: "Amplitude" },
+                margin: {l: 70, r: 30, t: 30, b: 70},
+                xaxis: {title: "Time"},
+                yaxis: {title: "Amplitude"},
                 legend: {
                     orientation: "h",
                     x: 0,
                     y: 1.08
-                }
+                },
+                hovermode: "closest"
             },
             {
                 responsive: true
             }
         );
-
-        samplingStatus.textContent =
-            `Wavelet filtering applied (${filterRetainFraction.value}% retained).`;
 
     } catch (error) {
         console.error(error);
@@ -464,17 +398,26 @@ async function updateWaveletFiltering() {
 }
 
 
-enableWaveletFiltering.addEventListener(
+preprocessingMethod.addEventListener(
     "change",
-    updateWaveletFiltering
+    updatePreprocessing
 );
 
-filterRetainFraction.addEventListener(
+denoisingStrength.addEventListener(
     "input",
     function () {
-        filterRetainValue.textContent =
+        denoisingStrengthValue.textContent =
             `${this.value}%`;
-        updateWaveletFiltering();
+        updatePreprocessing();
+    }
+);
+
+preprocessingCompression.addEventListener(
+    "input",
+    function () {
+        preprocessingCompressionValue.textContent =
+            `${this.value}%`;
+        updatePreprocessing();
     }
 );
 
@@ -550,6 +493,35 @@ function plotOriginalEventSignal() {
 }
 
 
+async function getDenoisedSignal() {
+    const strength = parseFloat(denoisingStrength.value);
+
+    const response = await fetch(
+        "/api/wavelet-denoise",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                values: originalSignal,
+                strength: strength
+            })
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(
+            data.error || "Unable to apply wavelet denoising."
+        );
+    }
+
+    return data;
+}
+
+
 async function applyEventSampling() {
 
     const threshold =
@@ -575,12 +547,42 @@ async function applyEventSampling() {
     samplingStatus.textContent =
         `Applying ${selectedAlgorithmLabel}...`;
 
-    const workingSignal =
-        enableWaveletFiltering.checked && filteredSignal
-            ? filteredSignal
-            : originalSignal;
-
     try {
+
+        let workingSignal = originalSignal;
+
+        if (preprocessingMethod.value === "denoising") {
+
+            const denoisingResult = await getDenoisedSignal();
+            workingSignal = denoisingResult.denoised;
+
+        } else if (preprocessingMethod.value === "compression") {
+
+            const response = await fetch(
+                "/compress-signal",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        retain_fraction:
+                            parseInt(preprocessingCompression.value) / 100
+                    })
+                }
+            );
+
+            const compressionResult = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    compressionResult.error ||
+                    "Unable to apply wavelet compression."
+                );
+            }
+
+            workingSignal = compressionResult.compressed;
+        }
 
         const response = await fetch(
             "/api/event-sampling",
@@ -616,6 +618,24 @@ async function applyEventSampling() {
                 sample.value
             );
 
+        const yMin = Math.min(
+            ...originalSignal,
+            ...workingSignal
+        );
+
+        const yMax = Math.max(
+            ...originalSignal,
+            ...workingSignal
+        );
+
+        const samplingLineX = [];
+        const samplingLineY = [];
+
+        transmittedTimes.forEach(time => {
+            samplingLineX.push(time, time, null);
+            samplingLineY.push(yMin, yMax, null);
+        });
+
         const originalTrace = {
             x: times,
             y: originalSignal,
@@ -624,16 +644,33 @@ async function applyEventSampling() {
             name: "Original signal"
         };
 
-        const filteredTrace = {
+        const processedTrace = {
             x: times,
             y: workingSignal,
             type: "scatter",
             mode: "lines",
-            name: "Wavelet filtered",
+            name:
+                preprocessingMethod.value === "denoising"
+                    ? "Wavelet denoised"
+                    : "Compressed signal",
             line: {
                 dash: "dash"
             },
-            visible: enableWaveletFiltering.checked
+            visible: preprocessingMethod.value !== "none"
+        };
+
+        const samplingLinesTrace = {
+            x: samplingLineX,
+            y: samplingLineY,
+            type: "scatter",
+            mode: "lines",
+            name: "Sampling instants",
+            line: {
+                width: 1
+            },
+            opacity: 0.18,
+            hoverinfo: "skip",
+            showlegend: true
         };
 
         const transmittedTrace = {
@@ -674,7 +711,7 @@ async function applyEventSampling() {
 
         const traces = [
             originalTrace,
-            filteredTrace
+            processedTrace
         ];
 
         if (data.reconstructed) {
@@ -691,6 +728,7 @@ async function applyEventSampling() {
             });
         }
 
+        traces.push(samplingLinesTrace);
         traces.push(transmittedTrace);
 
         Plotly.react(
@@ -832,7 +870,10 @@ async function applySVMDetection() {
             y: data.prediction,
             type: "scatter",
             mode: "lines",
-            name: "SVR model"
+            name: "SVR model",
+            line: {
+                width: 3
+            }
         };
 
         const upperTrace = {
@@ -842,7 +883,8 @@ async function applySVMDetection() {
             mode: "lines",
             name: "+ε",
             line: {
-                dash: "dash"
+                dash: "dash",
+                width: 1
             }
         };
 
@@ -853,7 +895,8 @@ async function applySVMDetection() {
             mode: "lines",
             name: "-ε",
             line: {
-                dash: "dash"
+                dash: "dash",
+                width: 1
             }
         };
 
@@ -941,7 +984,6 @@ applySVMButton.addEventListener(
 // Initialisation
 // --------------------------------------------------
 
-updateCompression();
 plotCWTSignal();
 updateCWT();
 plotOriginalEventSignal();
