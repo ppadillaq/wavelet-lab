@@ -13,6 +13,7 @@ from flask import (
 from services.wavelet_service import compress_wavelet
 from services.signal_store import signal_store
 from services.svm_service import detect_svm_events
+from services.denoising_service import wavelet_denoise
 
 from services.event_sampling import (
     send_on_delta,
@@ -221,6 +222,31 @@ def svm_events():
             C=C,
             gamma=gamma,
             epsilon=epsilon,
+        )
+    except (ValueError, TypeError) as error:
+        return {"error": str(error)}, 400
+
+    return result
+
+
+@signal_lab_bp.route("/api/wavelet-denoise", methods=["POST"])
+def wavelet_denoising():
+
+    data = request.get_json(silent=True) or {}
+
+    values = data.get("values", [])
+
+    try:
+        strength = float(data.get("strength", 1.0))
+    except (TypeError, ValueError):
+        return {
+            "error": "Denoising strength must be numeric."
+        }, 400
+
+    try:
+        result = wavelet_denoise(
+            values,
+            strength=strength
         )
     except (ValueError, TypeError) as error:
         return {"error": str(error)}, 400
